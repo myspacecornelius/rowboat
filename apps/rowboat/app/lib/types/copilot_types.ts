@@ -3,6 +3,7 @@ import { Workflow } from "./workflow_types";
 import { apiV1 } from "rowboat-shared"
 import { AgenticAPIChatMessage } from "./agents_api_types";
 import { convertToAgenticAPIChatMessages } from "./agents_api_types";
+import { Scenario } from "./testing_types";
 
 export const CopilotWorkflow = Workflow.omit({
     lastUpdatedAt: true,
@@ -140,5 +141,55 @@ export function convertToCopilotWorkflow(workflow: z.infer<typeof Workflow>): z.
     return {
         ...rest,
     };
+}
+
+export const CopilotScenarios = z.array(Scenario.omit({
+    projectId: true,
+    createdAt: true,
+    lastUpdatedAt: true,
+}));
+
+export const CopilotScenariosContext = z.union([
+    z.object({
+        type: z.literal('scenarios_list'),
+        scenarios: z.array(z.string()), // Array of scenario IDs
+    }),
+    z.object({
+        type: z.literal('scenario_detail'),
+        scenarioId: z.string(),
+    }),
+]);
+
+export const CopilotApiScenariosContext = z.union([
+    z.object({
+        type: z.literal('scenarios_list'),
+        scenarios: z.array(z.string()), // Array of scenario IDs
+    }),
+    z.object({
+        type: z.literal('scenario_detail'),
+        scenarioId: z.string(),
+    }),
+]);
+
+export function convertToCopilotScenarios(scenarios: z.infer<typeof Scenario>[]): z.infer<typeof CopilotScenarios> {
+    return scenarios.map(scenario => {
+        const { projectId, createdAt, lastUpdatedAt, ...rest } = scenario;
+        return rest;
+    });
+}
+
+export function convertToCopilotApiScenariosContext(context: z.infer<typeof CopilotScenariosContext>): z.infer<typeof CopilotApiScenariosContext> {
+    switch (context.type) {
+        case 'scenarios_list':
+            return {
+                type: 'scenarios_list',
+                scenarios: context.scenarios,
+            };
+        case 'scenario_detail':
+            return {
+                type: 'scenario_detail',
+                scenarioId: context.scenarioId,
+            };
+    }
 }
 

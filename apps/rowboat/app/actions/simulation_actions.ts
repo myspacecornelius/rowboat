@@ -37,48 +37,55 @@ export async function getScenario(projectId: string, scenarioId: string): Promis
     };
 }
 
-export async function createScenario(projectId: string, name: string, description: string): Promise<string> {
+export async function createScenario(
+    projectId: string,
+    name: string,
+    description: string,
+    criteria: string = '',
+    context: string = ''
+): Promise<string> {
     await projectAuthCheck(projectId);
-
+    
     const now = new Date().toISOString();
-    const result = await scenariosCollection.insertOne({
+    const scenario = {
         projectId,
         name,
         description,
-        context: '',
-        criteria: '',
-        lastUpdatedAt: now,
+        criteria,
+        context,
         createdAt: now,
-    });
-
+        lastUpdatedAt: now,
+    };
+    
+    const result = await scenariosCollection.insertOne(scenario);
     return result.insertedId.toString();
 }
 
 export async function updateScenario(
     projectId: string,
     scenarioId: string,
-    updates: { 
-        name?: string; 
-        description?: string; 
-        context?: string;
+    updates: {
+        name?: string;
+        description?: string;
         criteria?: string;
+        context?: string;
     }
 ): Promise<void> {
     await projectAuthCheck(projectId);
-
+    
     const updateData: any = {
-        ...updates,
         lastUpdatedAt: new Date().toISOString(),
     };
-
+    
+    // Only include fields that are provided in updates
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.criteria !== undefined) updateData.criteria = updates.criteria;
+    if (updates.context !== undefined) updateData.context = updates.context;
+    
     await scenariosCollection.updateOne(
-        {
-            _id: new ObjectId(scenarioId),
-            projectId,
-        },
-        {
-            $set: updateData,
-        }
+        { _id: new ObjectId(scenarioId), projectId },
+        { $set: updateData }
     );
 }
 

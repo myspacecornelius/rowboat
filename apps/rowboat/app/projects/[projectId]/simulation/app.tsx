@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PlusIcon, PencilIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, ChevronRightIcon, PlayIcon, ChevronDownIcon, ChevronLeftIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, PencilIcon, XMarkIcon, EllipsisVerticalIcon, TrashIcon, ChevronRightIcon, PlayIcon, ChevronDownIcon, ChevronLeftIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { 
     getScenarios, 
@@ -31,6 +31,9 @@ import {
     ResizablePanelGroup,
 } from "../../../../components/ui/resizable"
 import { Pagination } from "../../../lib/components/pagination";
+import { Copilot } from './components/copilot';
+import { CopilotMessage, CopilotScenariosContext } from '../../../lib/types/copilot_types';
+import { Sparkles } from 'lucide-react';
 
 type ScenarioType = WithStringId<z.infer<typeof Scenario>>;
 type SimulationRunType = WithStringId<z.infer<typeof SimulationRun>>;
@@ -89,6 +92,14 @@ export default function SimulationApp() {
   const [menuOpenId, setMenuOpenIdState] = useState<string | null>(null);
   const runsPerPage = 10;
   const currentPage = Number(searchParams.get('page')) || 1;
+  const [showCopilot, setShowCopilot] = useState(false);
+  const [copilotWidth, setCopilotWidth] = useState(25);
+  const [copilotKey, setCopilotKey] = useState(0);
+  const [copilotMessages, setCopilotMessages] = useState<z.infer<typeof CopilotMessage>[]>([]);
+  const [loadingResponse, setLoadingResponse] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Thinking...");
+  const [responseError, setResponseError] = useState<string | null>(null);
+  const [copilotScenariosContext, setCopilotScenariosContext] = useState<z.infer<typeof CopilotScenariosContext> | undefined>(undefined);
 
   const setMenuOpenId = useCallback((id: string | null) => {
     setMenuOpenIdState(id);
@@ -380,80 +391,225 @@ export default function SimulationApp() {
   const currentRuns = runs.slice(indexOfFirstRun, indexOfLastRun);
   const totalPages = Math.ceil(runs.length / runsPerPage);
 
-  return (
-    <ResizablePanelGroup direction="horizontal" className="h-screen gap-1">
-      <ResizablePanel minSize={10} defaultSize={15}>
-        <ScenarioList
-          scenarios={scenarios}
-          selectedId={selectedScenario?._id ?? null}
-          onSelect={(id) => setSelectedScenario(scenarios.find(s => s._id === id) ?? null)}
-          onAdd={createNewScenario}
-          onRunScenario={(id) => {
-            const scenario = scenarios.find(s => s._id === id);
-            if (scenario) runSingleScenario(scenario);
-          }}
-          onDeleteScenario={(id) => handleDeleteScenario(id)}
-        />
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel minSize={20} defaultSize={85} className="overflow-auto">
-        {selectedScenario ? (
-          <ScenarioViewer
-            scenario={selectedScenario}
-            onSave={handleUpdateScenario}
-            onClose={handleCloseScenario}
-          />
-        ) : (
-          <StructuredPanel 
-            title="SIMULATION RUNS"
-            tooltip="Run and view simulations"
-            actions={[
-              <ActionButton
-                key="run-all"
-                onClick={() => void runAllScenarios()}
-                disabled={isRunning}
-                icon={<PlayIcon className="w-4 h-4" />}
-                primary
-              >
-                Run All Scenarios
-              </ActionButton>
-            ]}
-          >
-            <div className="p-6">
-              {/* Runs list */}
-              {isLoadingRuns ? (
-                <div>Loading runs...</div>
-              ) : (
-                <div className="space-y-4">
-                  {currentRuns.map((run) => (
-                    <SimulationResultCard
-                      key={run._id}
-                      run={run}
-                      results={allRunResults[run._id] || []}
-                      scenarios={scenarios}
-                      workflow={workflowVersions[run.workflowId]}
-                      onCancelRun={handleCancelRun}
-                      onDeleteRun={handleDeleteRun}
-                      menuOpenId={menuOpenId}
-                      setMenuOpenId={setMenuOpenId}
-                    />
-                  ))}
-                </div>
-              )}
+  // Handle applying changes from copilot
+  const handleApplyCopilotChange = async (action: any) => {
+    if (!projectId) return;
+    
+    try {
+      if (action.action === 'create_new') {
+        // Create a new scenario
+        const newScenarioId = await createScenario(
+          projectId as string,
+          action.name,
+          action.config_changes.description || '',
+          action.config_changes.criteria || '',
+          action.config_changes.context || ''
+        );
+        
+        // Refresh scenarios list
+        const updatedScenarios = await getScenarios(projectId as string);
+        setScenarios(updatedScenarios);
+        
+        // Select the new scenario
+        const newScenario = updatedScenarios.find(s => s._id === newScenarioId);
+        if (newScenario) {
+          setSelectedScenario(newScenario);
+          setIsEditing(true);
+          
+          // Update copilot context to the new scenario
+          setCopilotScenariosContext({
+            type: 'scenario_detail',
+            scenarioId: newScenarioId
+          });
+        }
+      } else if (action.action === 'edit' && action.name) {
+        // Find the scenario to edit
+        const scenarioToEdit = scenarios.find(s => s.name === action.name);
+        
+        if (scenarioToEdit) {
+          // Prepare update data
+          const updateData: any = {};
+          
+          // Only include fields that are in config_changes
+          if ('name' in action.config_changes) updateData.name = action.config_changes.name;
+          if ('description' in action.config_changes) updateData.description = action.config_changes.description;
+          if ('criteria' in action.config_changes) updateData.criteria = action.config_changes.criteria;
+          if ('context' in action.config_changes) updateData.context = action.config_changes.context;
+          
+          // Update the scenario
+          await updateScenario(
+            projectId as string,
+            scenarioToEdit._id,
+            updateData
+          );
+          
+          // Refresh scenarios list
+          const updatedScenarios = await getScenarios(projectId as string);
+          setScenarios(updatedScenarios);
+          
+          // Update selected scenario if it's the one being edited
+          if (selectedScenario && selectedScenario._id === scenarioToEdit._id) {
+            const updatedScenario = updatedScenarios.find(s => s._id === scenarioToEdit._id);
+            if (updatedScenario) {
+              setSelectedScenario(updatedScenario);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error applying copilot change:', error);
+      alert('Failed to apply changes: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
 
-              {/* Pagination */}
-              {runs.length > runsPerPage && (
-                <div className="flex justify-center mt-4">
-                  <Pagination
-                    total={totalPages}
-                    page={currentPage}
-                  />
-                </div>
-              )}
+  // Update copilot context when selected scenario changes
+  useEffect(() => {
+    if (selectedScenario) {
+      setCopilotScenariosContext({
+        type: 'scenario_detail',
+        scenarioId: selectedScenario._id
+      });
+    } else {
+      setCopilotScenariosContext({
+        type: 'scenarios_list',
+        scenarios: scenarios.map(s => s._id)
+      });
+    }
+  }, [selectedScenario, scenarios]);
+
+  return (
+    <div className="flex flex-col h-screen">
+        <div className="h-10 flex items-center justify-between px-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div className="text-sm font-medium">Simulation Tests</div>
+            <div className="flex items-center gap-2">
+                <button
+                    className="p-1 text-blue-600 hover:text-blue-800 hover:cursor-pointer"
+                    title="Toggle Copilot"
+                    onClick={() => setShowCopilot(!showCopilot)}
+                >
+                    <Sparkles size={16} />
+                </button>
             </div>
-          </StructuredPanel>
-        )}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+        </div>
+        <ResizablePanelGroup direction="horizontal" className="grow">
+            <ResizablePanel minSize={10} defaultSize={15}>
+                <ScenarioList
+                    scenarios={scenarios}
+                    selectedId={selectedScenario?._id ?? null}
+                    onSelect={(id) => setSelectedScenario(scenarios.find(s => s._id === id) ?? null)}
+                    onAdd={createNewScenario}
+                    onRunScenario={(id) => {
+                        const scenario = scenarios.find(s => s._id === id);
+                        if (scenario) runSingleScenario(scenario);
+                    }}
+                    onDeleteScenario={(id) => handleDeleteScenario(id)}
+                />
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel
+                minSize={20}
+                defaultSize={showCopilot ? 85 - copilotWidth : 85}
+                className="overflow-auto"
+            >
+                {selectedScenario ? (
+                    <ScenarioViewer
+                        scenario={selectedScenario}
+                        onSave={handleUpdateScenario}
+                        onClose={handleCloseScenario}
+                    />
+                ) : (
+                    <StructuredPanel 
+                        title="SIMULATION RUNS"
+                        tooltip="Run and view simulations"
+                        actions={[
+                            <ActionButton
+                                key="run-all"
+                                onClick={() => void runAllScenarios()}
+                                disabled={isRunning}
+                                icon={<PlayIcon className="w-4 h-4" />}
+                                primary
+                            >
+                                Run All Scenarios
+                            </ActionButton>
+                        ]}
+                    >
+                        <div className="p-6">
+                            {/* Runs list */}
+                            {isLoadingRuns ? (
+                                <div>Loading runs...</div>
+                            ) : runs.length === 0 ? (
+                                <div className="text-center text-gray-500">
+                                    Create scenarios and run them as simulations.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {currentRuns.map((run) => (
+                                        <SimulationResultCard
+                                            key={run._id}
+                                            run={run}
+                                            results={allRunResults[run._id] || []}
+                                            scenarios={scenarios}
+                                            workflow={workflowVersions[run.workflowId]}
+                                            onCancelRun={handleCancelRun}
+                                            onDeleteRun={handleDeleteRun}
+                                            menuOpenId={menuOpenId}
+                                            setMenuOpenId={setMenuOpenId}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {runs.length > runsPerPage && (
+                                <div className="flex justify-center mt-4">
+                                    <Pagination
+                                        total={totalPages}
+                                        page={currentPage}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </StructuredPanel>
+                )}
+            </ResizablePanel>
+            {showCopilot && <>
+                <ResizableHandle />
+                <ResizablePanel
+                    minSize={10}
+                    defaultSize={copilotWidth}
+                    onResize={(size) => setCopilotWidth(size)}
+                >
+                    <Copilot
+                        key={copilotKey}
+                        projectId={projectId as string}
+                        config={{
+                            scenarios,
+                            selectedScenario,
+                            runs,
+                            activeRun
+                        }}
+                        chatContext={undefined}
+                        scenariosContext={copilotScenariosContext}
+                        onApplyChange={handleApplyCopilotChange}
+                        onNewChat={() => {
+                            setCopilotKey(prev => prev + 1);
+                            setCopilotMessages([]);
+                            setLoadingResponse(false);
+                            setLoadingMessage("Thinking...");
+                            setResponseError(null);
+                        }}
+                        messages={copilotMessages}
+                        setMessages={setCopilotMessages}
+                        loadingResponse={loadingResponse}
+                        setLoadingResponse={setLoadingResponse}
+                        loadingMessage={loadingMessage}
+                        setLoadingMessage={setLoadingMessage}
+                        responseError={responseError}
+                        setResponseError={setResponseError}
+                    />
+                </ResizablePanel>
+            </>}
+        </ResizablePanelGroup>
+    </div>
   );
 }

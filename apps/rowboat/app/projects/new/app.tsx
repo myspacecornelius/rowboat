@@ -34,7 +34,7 @@ function TemplateCard({
         {selected && <div className="absolute top-0 right-0 bg-gray-200 dark:bg-gray-800 flex items-center justify-center rounded p-1">
             <CheckIcon size={16} />
         </div>}
-        <div className="text-lg dark:text-gray-100">{template.name}</div>
+        <div className="text-lg dark:text-gray-100 text-left">{template.name}</div>
         <div className="shrink-0 text-sm text-gray-500 dark:text-gray-400 text-left">{template.description}</div>
     </button>
 }

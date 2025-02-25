@@ -2,7 +2,8 @@
 import { 
     convertToCopilotWorkflow, convertToCopilotMessage, convertToCopilotApiMessage,
     convertToCopilotApiChatContext, CopilotAPIResponse, CopilotAPIRequest,
-    CopilotChatContext, CopilotMessage, CopilotAssistantMessage, CopilotWorkflow 
+    CopilotChatContext, CopilotMessage, CopilotAssistantMessage, CopilotWorkflow,
+    CopilotApiScenariosContext, CopilotScenariosContext, convertToCopilotApiScenariosContext
 } from "../lib/types/copilot_types";
 import { 
     Workflow, WorkflowTool, WorkflowPrompt, WorkflowAgent 
@@ -13,6 +14,7 @@ import { assert } from "node:console";
 import { check_query_limit } from "../lib/rate_limiting";
 import { QueryLimitError } from "../lib/client_utils";
 import { projectAuthCheck } from "./project_actions";
+import { Scenario } from "../lib/types/testing_types";
 
 export async function getCopilotResponse(
     projectId: string,
@@ -219,4 +221,92 @@ export async function getCopilotAgentInstructions(
 
     // return response
     return agent_instructions;
+}
+
+export async function getCopilotTestingResponse(
+    projectId: string,
+    messages: z.infer<typeof CopilotMessage>[],
+    current_workflow_config: z.infer<typeof Workflow>,
+    scenarios?: z.infer<typeof CopilotScenariosContext>,
+): Promise<{
+    message: z.infer<typeof CopilotAssistantMessage>;
+    rawRequest: unknown;
+    rawResponse: unknown;
+}> {
+    await projectAuthCheck(projectId);
+    if (!await check_query_limit(projectId)) {
+        throw new QueryLimitError();
+    }
+
+    // prepare request
+    const request = {
+        messages: messages.map(convertToCopilotApiMessage),
+        workflow_schema: JSON.stringify(zodToJsonSchema(CopilotWorkflow)),
+        current_workflow_config: JSON.stringify(convertToCopilotWorkflow(current_workflow_config)),
+        context: scenarios ? convertToCopilotApiScenariosContext(scenarios) : null,
+    };
+    console.log(`copilot testing request`, JSON.stringify(request, null, 2));
+
+    // call copilot api
+    const response = await fetch(process.env.COPILOT_API_URL + '/testing', {
+        method: 'POST',
+        body: JSON.stringify(request),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.COPILOT_API_KEY || 'test'}`,
+        },
+    });
+    if (!response.ok) {
+        console.error('Failed to call copilot api', response);
+        throw new Error(`Failed to call copilot api: ${response.statusText}`);
+    }
+
+    // parse and return response
+    const json: z.infer<typeof CopilotAPIResponse> = await response.json();
+    console.log(`copilot testing response`, JSON.stringify(json, null, 2));
+    if ('error' in json) {
+        throw new Error(`Failed to call copilot api: ${json.error}`);
+    }
+
+    // remove leading ```json and trailing ```
+    const msg = convertToCopilotMessage({
+        role: 'assistant',
+        content: json.response.replace(/^```json\n/, '').replace(/\n```$/, ''),
+    });
+
+    // validate response schema
+    assert(msg.role === 'assistant');
+    if (msg.role === 'assistant') {
+        for (const part of msg.content.response) {
+            if (part.type === 'action') {
+                // Validate scenario creation/edit actions
+                const test = {
+                    name: 'test',
+                    description: 'test',
+                    criteria: '',
+                    context: '',
+                    createdAt: new Date().toISOString(),
+                    lastUpdatedAt: new Date().toISOString(),
+                } as z.infer<typeof Scenario>;
+
+                // Validate each field in config_changes
+                for (const [key, value] of Object.entries(part.content.config_changes)) {
+                    const result = Scenario.safeParse({
+                        ...test,
+                        [key]: value,
+                    });
+                    if (!result.success) {
+                        console.log(`discarding field ${key} from scenario: ${part.content.name}`, result.error.message);
+                        delete part.content.config_changes[key];
+                    }
+                }
+            }
+        }
+    }
+
+    return {
+        message: msg as z.infer<typeof CopilotAssistantMessage>,
+        rawRequest: request,
+        rawResponse: json,
+    };
 }

@@ -81,7 +81,7 @@ You are an helpful customer support assistant
     // single agent
     "single_agent": {
         "name": "Example Single Agent",
-        "description": "With tool calls and escalation.",
+        "description": "Includes tool calls and escalation.",
         "startAgent": "Account Balance Checker",
         "agents": [
             {
@@ -174,7 +174,7 @@ You are an helpful customer support assistant
     // Scooter Subscription
     'multi_agent': {
         "name": "Example Multi-Agent",
-        "description": "With tool calls, escalation, structured output, post processing, and prompt organization.",
+        "description": "Includes tool calls, structured outputs and advanced prompts.",
         "startAgent": "Main agent",
         "agents": [
             {
