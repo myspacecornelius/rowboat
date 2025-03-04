@@ -61,3 +61,4 @@ class TestResult(BaseModel):
     simulationId: str
     result: Literal["pass", "fail"]
     details: str
+    transcript: str

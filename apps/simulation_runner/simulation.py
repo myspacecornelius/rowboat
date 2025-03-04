@@ -82,11 +82,10 @@ async def simulate_simulation(
     # -------------------------
     # (2) EVALUATION STEP
     # -------------------------
-    transcript_str = ""
-    for m in messages:
-        role = m.get("role", "unknown")
-        content = m.get("content", "")
-        transcript_str += f"{role.upper()}: {content}\n"
+    transcript = json.dumps([{
+        "role": m.get("role", "unknown"),
+        "content": m.get("content", "")
+    } for m in messages], indent=2)
 
     # We use passCriteria as the evaluation “criteria.”
     evaluation_prompt = [
@@ -103,7 +102,7 @@ async def simulate_simulation(
         {
             "role": "user",
             "content": (
-                f"Here is the conversation transcript:\n\n{transcript_str}\n\n"
+                f"Here is the conversation transcript:\n\n{transcript}\n\n"
                 "Did the support bot answer correctly or not? "
                 "Return only 'pass' or 'fail' for verdict, and a brief explanation for details."
             )
@@ -135,7 +134,7 @@ async def simulate_simulation(
     if evaluation_result is None:
         raise Exception("No 'verdict' field found in evaluation response")
 
-    return (evaluation_result, details, transcript_str)
+    return (evaluation_result, details, transcript)
 
 async def simulate_simulations(
     simulations: List[TestSimulation],
@@ -179,7 +178,8 @@ async def simulate_simulations(
             runId=run_id,
             simulationId=simulation.id,
             result=verdict,
-            details=details
+            details=details,
+            transcript=transcript
         )
         results.append(test_result)
 
