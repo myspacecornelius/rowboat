@@ -9,7 +9,7 @@
 
 
 
-- ✨ Start from a simple prompt to create fully functional multi-agent system with the Copilot  
+- ✨ Start from an Idea -> AI builds the multi-agent system for you 
 - 🌐 Connect MCP servers 
 - 📞 Integrate into your app using the HTTP API 
 
