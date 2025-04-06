@@ -1,6 +1,6 @@
 ![ui](/assets/banner.png)
 
-<h2 align="center">AI that builds multi-agents with MCP tools for you</h2>
+<h2 align="center">AI that builds multi-agent systems with MCP tools for you</h2>
 <h5 align="center">
 
 [Quickstart](#quick-start) | [Docs](https://docs.rowboatlabs.com/) | [Website](https://www.rowboatlabs.com/) |  [Discord](https://discord.gg/jHhUKkKHn8) 
