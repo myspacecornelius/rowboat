@@ -33,7 +33,18 @@ Powered by OpenAI's Agents SDK, Rowboat is the fastest way to build multi-agents
 
 ## Demo
 
-![ui](/assets/ui_revamp_screenshot.png)
+Creating a fully functional multi-agent system with mock tools from a single prompt
+
+[![Watch the demo](https://img.youtube.com/vi/FD2B0vxoqPY/0.jpg)](https://www.youtube.com/watch?v=FD2B0vxoqPY)
+
+Adding MCP servers to your multi-agent system
+
+[![Watch the demo](https://img.youtube.com/vi/EbkIPCTyD58/0.jpg)](https://www.youtube.com/watch?v=EbkIPCTyD58)
+
+Editing agents 
+
+[![Watch the demo](https://img.youtube.com/vi/uoCEQtOe7eE/0.jpg)](https://www.youtube.com/watch?v=uoCEQtOe7eE)
+
 
 ## Integrate with the Rowboat HTTP API
 
