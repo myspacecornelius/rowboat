@@ -52,11 +52,11 @@ There are 2 ways to integrate with the agents you create in Rowboat
 
 1. HTTP API
    - You can use the API directly at [http://localhost:3000/api/v1/](http://localhost:3000/api/v1/)
-   - See [Rowboat API Docs](https://docs.rowboatlabs.com/using_the_api/) for more details
+   - See [API Docs](https://docs.rowboatlabs.com/using_the_api/) for more details
 
 2. Python SDK
    - You can you the included python SDK to interact with the Agents
-   - See [Rowboat SDK Docs]([https://docs.rowboatlabs.com/using_the_api/](https://docs.rowboatlabs.com/using_the_sdk/) for more details
+   - See [SDK Docs](https://docs.rowboatlabs.com/using_the_sdk/) for more details
 
 
 Refer to [Docs](https://docs.rowboatlabs.com/) to learn how to start building agents with Rowboat.
