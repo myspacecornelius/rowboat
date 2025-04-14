@@ -17,11 +17,23 @@ class AssistantMessage(BaseModel):
     content: str
 
 with open('copilot_multi_agent.md', 'r', encoding='utf-8') as file:
-    copilot_instructions = file.read()
+    copilot_instructions_multi_agent = file.read()
 
 with open('copilot_edit_agent.md', 'r', encoding='utf-8') as file:
     copilot_instructions_edit_agent = file.read()
 
+with open('example_multi_agent_1.md', 'r', encoding='utf-8') as file:
+    copilot_multi_agent_example1 = file.read()
+
+with open('current_workflow.md', 'r', encoding='utf-8') as file:
+    current_workflow_prompt = file.read()
+
+# Combine the instruction files to create the full multi-agent instructions
+copilot_instructions = "\n\n".join([
+    copilot_instructions_multi_agent,
+    copilot_multi_agent_example1,
+    current_workflow_prompt
+])
 
 def get_response(
         messages: List[UserMessage | AssistantMessage],
