@@ -1,5 +1,13 @@
 version: '3.8'
 
+volumes:
+  uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/uploads
+
 services:
   rowboat:
     build:
@@ -38,7 +46,10 @@ services:
       - MAX_PROJECTS_PER_USER=${MAX_PROJECTS_PER_USER}
       - VOICE_API_URL=${VOICE_API_URL}
       - PROVIDER_DEFAULT_MODEL=${PROVIDER_DEFAULT_MODEL}
+      - UPLOADS_DIR=/app/uploads
     restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
 
   rowboat_agents:
     build:
@@ -131,7 +142,10 @@ services:
       - RAG_UPLOADS_S3_REGION=${RAG_UPLOADS_S3_REGION}
       - QDRANT_URL=${QDRANT_URL}
       - QDRANT_API_KEY=${QDRANT_API_KEY}
+      - UPLOADS_DIR=/app/uploads
     restart: unless-stopped
+    volumes:
+      - uploads:/app/uploads
 
   rag_urls_worker:
     build:

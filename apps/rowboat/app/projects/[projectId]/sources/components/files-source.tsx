@@ -46,7 +46,7 @@ function FileListItem({
         }
     };
 
-    if (file.data.type !== 'file') {
+    if (file.data.type !== 'file_local' && file.data.type !== 'file_s3') {
         return null;
     }
 
@@ -180,10 +180,12 @@ export function FilesSource({
     projectId,
     dataSource,
     handleReload,
+    type,
 }: {
     projectId: string,
     dataSource: WithStringId<z.infer<typeof DataSource>>,
     handleReload: () => void;
+    type: 'files_local' | 'files_s3';
 }) {
     const [uploading, setUploading] = useState(false);
     const [fileListKey, setFileListKey] = useState(0);
@@ -199,7 +201,7 @@ export function FilesSource({
 
             // Upload files in parallel
             await Promise.all(acceptedFiles.map(async (file, index) => {
-                await fetch(urls[index].presignedUrl, {
+                await fetch(urls[index].uploadUrl, {
                     method: 'PUT',
                     body: file,
                     headers: {
@@ -209,20 +211,40 @@ export function FilesSource({
             }));
 
             // After successful uploads, update the database with file information
-            await addDocsToDataSource({
-                projectId,
-                sourceId: dataSource._id,
-                docData: acceptedFiles.map((file, index) => ({
+            let docData: {
+                _id: string,
+                name: string,
+                data: z.infer<typeof DataSourceDoc>['data']
+            }[] = [];
+            if (type === 'files_s3') {
+                docData = acceptedFiles.map((file, index) => ({
                     _id: urls[index].fileId,
                     name: file.name,
                     data: {
-                        type: 'file',
+                        type: 'file_s3' as const,
                         name: file.name,
                         size: file.size,
                         mimeType: file.type,
-                        s3Key: urls[index].s3Key,
+                        s3Key: urls[index].path,
                     },
-                })),
+                }));
+            } else {
+                docData = acceptedFiles.map((file, index) => ({
+                    _id: urls[index].fileId,
+                    name: file.name,
+                    data: {
+                        type: 'file_local' as const,
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type,
+                    },
+                }));
+            }
+
+            await addDocsToDataSource({
+                projectId,
+                sourceId: dataSource._id,
+                docData,
             });
 
             handleReload();
@@ -233,7 +255,7 @@ export function FilesSource({
         } finally {
             setUploading(false);
         }
-    }, [projectId, dataSource._id, handleReload]);
+    }, [projectId, dataSource._id, handleReload, type]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -247,8 +269,8 @@ export function FilesSource({
     });
 
     return (
-        <Section 
-            title="File Uploads" 
+        <Section
+            title="File Uploads"
             description="Upload and manage files for this data source."
         >
             <div className="space-y-8">

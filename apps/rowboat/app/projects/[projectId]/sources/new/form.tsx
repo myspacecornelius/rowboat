@@ -34,8 +34,13 @@ export function Form({
             startContent: <DataSourceIcon type="urls" />
         },
         {
-            key: "files",
-            label: "Upload files",
+            key: "files_local",
+            label: "Upload files (Local)",
+            startContent: <DataSourceIcon type="files" />
+        },
+        {
+            key: "files_s3",
+            label: "Upload files (S3)",
             startContent: <DataSourceIcon type="files" />
         }
     ];
@@ -73,7 +78,7 @@ export function Form({
             projectId,
             name: formData.get('name') as string,
             data: {
-                type: 'files',
+                type: formData.get('type') as 'files_local' | 'files_s3',
             },
             status: 'ready',
         });
@@ -196,10 +201,11 @@ export function Form({
                         />
                     </form>}
 
-                    {sourceType === "files" && <form
+                    {(sourceType === "files_local" || sourceType === "files_s3") && <form
                         action={createFilesDataSource}
                         className="flex flex-col gap-4"
                     >
+                        <input type="hidden" name="type" value={sourceType} />
                         <div className="space-y-2">
                             <label className="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                 Name

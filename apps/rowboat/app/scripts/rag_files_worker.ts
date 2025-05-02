@@ -11,7 +11,11 @@ import { PrefixLogger } from "../lib/utils";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { uploadsS3Client } from '../lib/uploads_s3_client';
+import fs from 'fs/promises';
 import crypto from 'crypto';
+import path from 'path';
+
+const UPLOADS_DIR = process.env.UPLOADS_DIR || '/uploads';
 
 const splitter = new RecursiveCharacterTextSplitter({
     separators: ['\n\n', '\n', '. ', '.', ''],
@@ -27,7 +31,11 @@ const day = 24 * hour;
 // Configure Google Gemini API
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
 
-async function getFileContent(s3Key: string): Promise<Buffer> {
+async function getLocalFileContent(path: string): Promise<Buffer> {
+    return await fs.readFile(path);
+}
+
+async function getS3FileContent(s3Key: string): Promise<Buffer> {
     const command = new GetObjectCommand({
         Bucket: process.env.RAG_UPLOADS_S3_BUCKET,
         Key: s3Key,
@@ -59,12 +67,17 @@ async function runProcessPipeline(_logger: PrefixLogger, job: WithId<z.infer<typ
         .child(doc._id.toString())
         .child(doc.name);
 
-    // Get file content from S3
-    logger.log("Fetching file from S3");
-    if (doc.data.type !== 'file') {
+    // Get file content
+    let fileData: Buffer;
+    if (doc.data.type === 'file_local') {
+        logger.log("Fetching file from local");
+        fileData = await getLocalFileContent(path.join(UPLOADS_DIR, doc._id.toString()));
+    } else if (doc.data.type === 'file_s3') {
+        logger.log("Fetching file from S3");
+        fileData = await getS3FileContent(doc.data.s3Key);
+    } else {
         throw new Error("Invalid data source type");
     }
-    const fileData = await getFileContent(doc.data.s3Key);
 
     // Use Gemini to extract text content
     logger.log("Extracting content using Gemini");
@@ -183,7 +196,7 @@ async function runDeletionPipeline(_logger: PrefixLogger, job: WithId<z.infer<ty
             job = await dataSourcesCollection.findOneAndUpdate(
                 {
                     $and: [
-                        { 'data.type': { $eq: "files" } },
+                        { 'data.type': { $in: ["files_local", "files_s3"] } },
                         {
                             $or: [
                                 // if the job has never been attempted
@@ -234,7 +247,7 @@ async function runDeletionPipeline(_logger: PrefixLogger, job: WithId<z.infer<ty
         let errors = false;
 
         try {
-            if (job.data.type !== 'files') {
+            if (job.data.type !== 'files_local' && job.data.type !== 'files_s3') {
                 throw new Error("Invalid data source type");
             }
 
