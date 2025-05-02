@@ -13,10 +13,12 @@ import { Panel } from "@/components/common/panel-common";
 export function Form({
     projectId,
     useRagUploads,
+    useRagS3Uploads,
     useRagScraping,
 }: {
     projectId: string;
     useRagUploads: boolean;
+    useRagS3Uploads: boolean;
     useRagScraping: boolean;
 }) {
     const [sourceType, setSourceType] = useState("");
@@ -130,7 +132,8 @@ export function Form({
                         onChange={setSourceType}
                         options={dropdownOptions}
                         disabledKeys={[
-                            ...(useRagUploads ? [] : ['files']),
+                            ...(useRagUploads ? [] : ['files_local']),
+                            ...(useRagS3Uploads ? [] : ['files_s3']),
                             ...(useRagScraping ? [] : ['urls']),
                         ]}
                     />

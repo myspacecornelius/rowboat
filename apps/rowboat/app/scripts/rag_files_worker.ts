@@ -15,7 +15,7 @@ import fs from 'fs/promises';
 import crypto from 'crypto';
 import path from 'path';
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR || '/uploads';
+const UPLOADS_DIR = process.env.RAG_UPLOADS_DIR || '/uploads';
 
 const splitter = new RecursiveCharacterTextSplitter({
     separators: ['\n\n', '\n', '. ', '.', ''],
@@ -178,7 +178,6 @@ async function runDeletionPipeline(_logger: PrefixLogger, job: WithId<z.infer<ty
 // fetch next job from mongodb
 (async () => {
     while (true) {
-        console.log("Polling for job...")
         const now = Date.now();
         let job: WithId<z.infer<typeof DataSource>> | null = null;
 

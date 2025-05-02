@@ -5,7 +5,7 @@ import fsSync from 'fs';
 import { dataSourceDocsCollection } from '@/app/lib/mongodb';
 import { ObjectId } from 'mongodb';
 
-const UPLOADS_DIR = process.env.UPLOADS_DIR || '/uploads';
+const UPLOADS_DIR = process.env.RAG_UPLOADS_DIR || '/uploads';
 
 // PUT endpoint to handle file uploads
 export async function PUT(

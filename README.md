@@ -22,11 +22,11 @@ Powered by OpenAI's Agents SDK, Rowboat is the fastest way to build multi-agents
    export OPENAI_API_KEY=your-openai-api-key
    ```
       
-2. Clone the repository and start Rowboat docker
+2. Clone the repository and start Rowboat
    ```bash
    git clone git@github.com:rowboatlabs/rowboat.git
    cd rowboat
-   docker-compose up --build
+   ./start.sh
    ```
 
 3. Access the app at [http://localhost:3000](http://localhost:3000).
@@ -37,6 +37,32 @@ Note: See the [Using custom LLM providers](https://docs.rowboatlabs.com/setup/#u
 
 #### Create a multi-agent assistant with MCP tools by chatting with Rowboat
 [![Screenshot 2025-04-23 at 00 25 31](https://github.com/user-attachments/assets/c8a41622-8e0e-459f-becb-767503489866)](https://youtu.be/YRTCw9UHRbU)
+
+## Retrieval-Augmented Generation (RAG)
+
+Rowboat supports text-based RAG (Retrieval-Augmented Generation) out of the box, allowing your agents to access and reason over custom knowledge from files and URLs.
+
+### Enabling File Uploads (Local & S3)
+
+- **Local File Uploads:**
+  - Set the environment variable `USE_RAG_UPLOADS=true` in your environment or `.env` file.
+  - You must also provide a `GOOGLE_API_KEY` with Gemini usage enabled.
+
+- **S3 File Uploads:**
+  - Set `USE_RAG_S3_UPLOADS=true`.
+  - Provide your S3 configuration:
+    - `AWS_ACCESS_KEY_ID`
+    - `AWS_SECRET_ACCESS_KEY`
+    - `RAG_UPLOADS_S3_BUCKET`
+    - `RAG_UPLOADS_S3_REGION`
+  - You must also provide a `GOOGLE_API_KEY` with Gemini usage enabled.
+
+### Enabling URL Scraping
+
+- Set the environment variable `USE_RAG_SCRAPING=true`.
+- Provide your `FIRECRAWL_API_KEY` for web scraping capabilities.
+
+With these options enabled, your agents can retrieve and use information from uploaded files or scraped URLs as part of their workflow.
 
 ## Integrate with Rowboat agents
 
