@@ -8,11 +8,11 @@ mkdir -p data/mongo
 # Start with the base command and profile flags
 CMD="docker-compose"
 
-# Add profiles based on environment variables
-if [ "$USE_RAG_UPLOADS" = "true" ] || [ "$USE_RAG_S3_UPLOADS" = "true" ]; then
-  CMD="$CMD --profile rag_files_worker"
-fi
+# enable rag text and files workers
+CMD="$CMD --profile rag_text_worker"
+CMD="$CMD --profile rag_files_worker"
 
+# enable rag urls worker
 if [ "$USE_RAG_SCRAPING" = "true" ]; then
   CMD="$CMD --profile rag_urls_worker"
 fi

@@ -262,9 +262,9 @@ export function FilesSource({
         disabled: uploading,
         accept: {
             'application/pdf': ['.pdf'],
-            'text/plain': ['.txt'],
-            'application/msword': ['.doc'],
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+            // 'text/plain': ['.txt'],
+            // 'application/msword': ['.doc'],
+            // 'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
         },
     });
 
@@ -291,7 +291,7 @@ export function FilesSource({
                         <div className="space-y-2">
                             <p>Drag and drop files here, or click to select files</p>
                             <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Supported file types: PDF, TXT, DOC, DOCX
+                                Only PDF files are supported for now.
                             </p>
                         </div>
                     )}

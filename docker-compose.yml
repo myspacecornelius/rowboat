@@ -148,6 +148,7 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY}
       - RAG_UPLOADS_DIR=/app/uploads
+      - USE_GEMINI_FILE_PARSING=${USE_GEMINI_FILE_PARSING}
     restart: unless-stopped
     volumes:
       - uploads:/app/uploads
@@ -175,6 +176,7 @@ services:
       context: ./apps/rowboat
       dockerfile: scripts.Dockerfile
     command: ["npm", "run", "ragTextWorker"]
+    profiles: [ "rag_text_worker" ]
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMBEDDING_PROVIDER_BASE_URL=${EMBEDDING_PROVIDER_BASE_URL}
